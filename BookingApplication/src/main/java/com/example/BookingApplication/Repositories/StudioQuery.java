@@ -45,6 +45,7 @@ public class StudioQuery {
 
             if (booking.getExpiresAt().isBefore(LocalDateTime.now())) {
                 booking.setStatus(BookingStatus.EXPIRED);
+                booking.setStudioId("EXPIRED_" + booking.getStudioId());
                 mongoTemplate.save(booking);
             }
         }

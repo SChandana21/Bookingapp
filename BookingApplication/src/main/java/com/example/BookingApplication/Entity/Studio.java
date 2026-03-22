@@ -17,6 +17,7 @@ public class Studio {
     private String name;
     private String location;
     private double pricePerHour;
+    private String studiorecipient;
 
     private List<String> amenities; // mic, camera, lighting
 }

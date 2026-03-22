@@ -1,5 +1,8 @@
 package com.example.BookingApplication.Controllers;
 
+import com.example.BookingApplication.Redis.Redisconfig;
+import com.example.BookingApplication.Repositories.BookingsRepository;
+import com.example.BookingApplication.Repositories.StudioRepository;
 import com.example.BookingApplication.Service.MemberService;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -10,6 +13,7 @@ import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +23,10 @@ import java.util.Optional;
 @RequestMapping("/stripe")
 public class WebhookController {
 
+    @Autowired
+    private BookingsRepository bookingsRepository;
+    @Autowired
+    private RedisTemplate redisTemplate;
     @Autowired
     private MemberService memberService;
     private final String endpointSecret = "whsec_39477388743e3c28c9f0fda189f0d745191ff8ab322141f4f52968049fa487f6"; // replace with your CLI secret
@@ -67,6 +75,7 @@ public class WebhookController {
             if ("paid".equals(paymentStatus) && bookingId != null) {
                 System.out.println("🎯 Confirm booking for ID: " + bookingId);
                 memberService.ConfirmBooking(bookingId);
+                
 
             }
 

@@ -4,6 +4,7 @@ import com.example.BookingApplication.Entity.Bookings;
 import com.example.BookingApplication.Entity.Studio;
 import com.example.BookingApplication.Entity.User;
 import com.example.BookingApplication.Enum.BookingStatus;
+import com.example.BookingApplication.Redis.Redisconfig;
 import com.example.BookingApplication.Repositories.BookingsRepository;
 import com.example.BookingApplication.Repositories.StudioQuery;
 import com.example.BookingApplication.Repositories.StudioRepository;
@@ -12,6 +13,7 @@ import com.example.BookingApplication.Validation.InvalidtimeException;
 import com.example.BookingApplication.Validation.SlotBookedException;
 import com.example.BookingApplication.dto.BookingDTO;
 
+import com.example.BookingApplication.dto.EmailDTO;
 import com.example.BookingApplication.dto.PaymentDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -22,8 +24,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.awt.print.Book;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static com.example.BookingApplication.Enum.BookingStatus.EXPIRED;
 import static com.example.BookingApplication.Enum.BookingStatus.PENDING;
@@ -46,8 +50,12 @@ public class MemberService {
     @Autowired
     private StudioQuery studioQuery;
 
+    @Autowired
+    private EmailServiceIMPL emailServiceIMPL;
 
 
+    @Autowired
+    private Redisconfig redisconfig;
   @Autowired
   private PaymentService paymentService;
 
@@ -91,7 +99,21 @@ public class MemberService {
         booking.setStatus(PENDING);
         booking.setStudioId(bookingDto.getStudioId());
         booking.setUserId(memberId);
-        Bookings saved = bookingsRepository.save(booking);
+        Bookings saved = null;
+        try {
+            boolean locked = redisconfig.AcquireLock(
+                    bookingDto.getStudioId(),
+                    bookingDto.getStartTime(),
+                    bookingDto.getEndTime()
+            );
+
+            if (!locked)
+                throw new SlotBookedException("Slot already locked");
+
+            saved = bookingsRepository.save(booking);
+        } catch (Exception e) {
+            throw new SlotBookedException("Slot booked already");
+        }
         String bookingId = saved.getId();
             studioQuery.ScheduleCancelled();
             PaymentDTO paymentDTO = new PaymentDTO();
@@ -114,6 +136,20 @@ public class MemberService {
                 Bookingtoconfirm.setStatus(BookingStatus.CONFIRMED);
                 bookingsRepository.save(Bookingtoconfirm);
                 Bookingstatus = true;
+                EmailDTO emailDTO = new EmailDTO();
+                emailDTO.setBookingId(Bookingtoconfirm.getId());
+                emailDTO.setStarttime(Bookingtoconfirm.getStartTime());
+                emailDTO.setEndTime(Bookingtoconfirm.getEndTime());
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                User byName = userRepository.findByName(username);
+                String id1 = byName.getId();
+                String studioId = Bookingtoconfirm.getStudioId();
+                ObjectId studioid = new ObjectId(studioId);
+                Studio byId = studioRepository.findById(studioid).orElse(null);
+                String recipient = (byId.getStudiorecipient()); //fallback
+                emailDTO.setUserId(id1);
+                emailDTO.setStudioRecipient(recipient);
+                emailServiceIMPL.sendSimpleMail(emailDTO);
             } else {
                 //log
                 System.out.println("expired, ignored payment!");
