@@ -1,7 +1,9 @@
 package com.example.BookingApplication.Service;
 
 import com.example.BookingApplication.Entity.Bookings;
+import com.example.BookingApplication.Entity.Studio;
 import com.example.BookingApplication.Entity.User;
+import com.example.BookingApplication.Enum.BookingStatus;
 import com.example.BookingApplication.Repositories.BookingsRepository;
 import com.example.BookingApplication.Repositories.StudioQuery;
 import com.example.BookingApplication.Repositories.StudioRepository;
@@ -9,6 +11,12 @@ import com.example.BookingApplication.Repositories.UserRepository;
 import com.example.BookingApplication.Validation.InvalidtimeException;
 import com.example.BookingApplication.Validation.SlotBookedException;
 import com.example.BookingApplication.dto.BookingDTO;
+
+import com.example.BookingApplication.dto.PaymentDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,10 +25,15 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.example.BookingApplication.Enum.BookingStatus.EXPIRED;
+import static com.example.BookingApplication.Enum.BookingStatus.PENDING;
+
+@Slf4j
 @Service
 public class MemberService {
     //payment
 
+    private static final Marker SUCCESS_MARKER = MarkerFactory.getMarker("BOOKING_SUCCESS");
     @Autowired
     private BookingsRepository bookingsRepository;
 
@@ -35,7 +48,11 @@ public class MemberService {
 
 
 
-    public boolean ConflictDetection (BookingDTO bookingDto) {
+  @Autowired
+  private PaymentService paymentService;
+
+
+    public boolean ConflictDetection(BookingDTO bookingDto) {
         boolean Conflict = false;
         try {
             boolean conflictBookings = studioQuery.FindConflictBookings(bookingDto);
@@ -54,33 +71,55 @@ public class MemberService {
         return false;
     }
 
-    public boolean CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
+    public String CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
         boolean conflictDetection = ConflictDetection(bookingDto);
         if (conflictDetection)
             throw new SlotBookedException("Slot Booked");
+
         boolean validateRequest = ValidRequest(bookingDto);
-        if (!validateRequest) {
+        if (!validateRequest)
             throw new InvalidtimeException("Please Check your time Slots, Minimum Duration must be 30minutes");
-        }
         String name = SecurityContextHolder.getContext().getAuthentication().getName();
         User member = userRepository.findByName(name);
         String memberId = member.getId();
-        boolean Status = false;
-        try {
-            Bookings booking = new Bookings();
-            booking.setCreatedAt(LocalDateTime.now());
-            booking.setAmount(bookingDto.getAmount());
-            booking.setStartTime(bookingDto.getStartTime());
-            booking.setEndTime(bookingDto.getEndTime());
-            booking.setStatus(bookingDto.getStatus());
-            booking.setStudioId(bookingDto.getStudioId());
-            booking.setUserId(memberId);
-            bookingsRepository.save(booking);
-            Status = true;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        Bookings booking = new Bookings();
+        booking.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        booking.setCreatedAt(LocalDateTime.now());
+        booking.setAmount(bookingDto.getAmount());
+        booking.setStartTime(bookingDto.getStartTime());
+        booking.setEndTime(bookingDto.getEndTime());
+        booking.setStatus(PENDING);
+        booking.setStudioId(bookingDto.getStudioId());
+        booking.setUserId(memberId);
+        Bookings saved = bookingsRepository.save(booking);
+        String bookingId = saved.getId();
+            studioQuery.ScheduleCancelled();
+            PaymentDTO paymentDTO = new PaymentDTO();
+            paymentDTO.setBookingId(bookingId);
+            paymentDTO.setName(bookingDto.getStudioId());
+            paymentDTO.setQuantity(1L);
+            paymentDTO.setAmount(10000L);
+            String paymentUrl = paymentService.checkOut(paymentDTO);
+        return paymentUrl;
+
+    }
+
+
+    public boolean ConfirmBooking(String BookingId) {
+        boolean Bookingstatus = false;
+        ObjectId id = new ObjectId(BookingId);
+        Bookings Bookingtoconfirm = bookingsRepository.findById(id).orElseThrow(() -> new RuntimeException("Booking not found"));
+        if (Bookingtoconfirm.getStatus() == PENDING) {
+            if (Bookingtoconfirm.getExpiresAt().isAfter(LocalDateTime.now())) {
+                Bookingtoconfirm.setStatus(BookingStatus.CONFIRMED);
+                bookingsRepository.save(Bookingtoconfirm);
+                Bookingstatus = true;
+            } else {
+                //log
+                System.out.println("expired, ignored payment!");
+            }
         }
-        return Status;
+        return Bookingstatus;
     }
 
     public boolean cancelBooking(BookingDTO bookingDTO) {
@@ -103,4 +142,12 @@ public class MemberService {
         }
         return deletedStatus;
     }
+
+
+    public List<Studio> GetallStudios() {
+        List<Studio> studioList = studioRepository.findAll();
+        return studioList;
+    }
+
+
 }

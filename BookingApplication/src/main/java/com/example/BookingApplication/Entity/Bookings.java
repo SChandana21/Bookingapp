@@ -22,6 +22,8 @@ public class Bookings {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 
+    private LocalDateTime expiresAt;
+
     private BookingStatus status;
 
     private double amount;

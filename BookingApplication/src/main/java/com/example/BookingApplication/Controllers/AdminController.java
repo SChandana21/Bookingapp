@@ -5,19 +5,18 @@ import com.example.BookingApplication.Service.StudioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
-@RequestMapping("/add")
+@RequestMapping("/studio")
 public class AdminController {
 
     @Autowired
     private StudioService studioService;
 
-    @PostMapping("/studio")
+    @PostMapping("/add")
     public ResponseEntity<?> CreatenewStudio(@RequestBody Studio Newstudio) {
     try {
         studioService.PostStudios(Newstudio);
@@ -26,5 +25,16 @@ public class AdminController {
         return new ResponseEntity<>(HttpStatus.CONFLICT);
     }
     }
+
+    @GetMapping("/List")
+    public ResponseEntity<?> GetallStudios() {
+        try {
+            List<Studio> studios = studioService.GetallStudios();
+            return new ResponseEntity<>(studios, HttpStatus.FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
 
 }

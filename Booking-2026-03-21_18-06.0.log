@@ -1,0 +1,4 @@
+18:06:03:330 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+18:06:03:332 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+18:06:03:333 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+18:06:04:105 [http-nio-8080-exec-1] INFO  c.e.B.Service.MemberService - 69bd4d1fadad26d5c6ed8450Booked 69bd6f1ba8393eea8006fc0bat2026-03-21T18:002026-03-21T18:30

@@ -5,6 +5,8 @@ import com.example.BookingApplication.Repositories.StudioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class StudioService {
 
@@ -15,4 +17,8 @@ public class StudioService {
         studioRepository.save(newstudio);
     }
 
+    public List<Studio> GetallStudios() {
+        List<Studio> studioList = studioRepository.findAll();
+        return studioList;
+    }
 }
