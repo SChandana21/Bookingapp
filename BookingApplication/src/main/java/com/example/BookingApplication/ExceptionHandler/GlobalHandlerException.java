@@ -1,6 +1,7 @@
 package com.example.BookingApplication.ExceptionHandler;
 
 import com.example.BookingApplication.Validation.InvalidtimeException;
+import com.example.BookingApplication.Validation.JWTExpiredException;
 import com.example.BookingApplication.Validation.SlotBookedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,4 +22,8 @@ public class GlobalHandlerException {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler
+    public ResponseEntity<String> handleJWTexpired(JWTExpiredException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
 }

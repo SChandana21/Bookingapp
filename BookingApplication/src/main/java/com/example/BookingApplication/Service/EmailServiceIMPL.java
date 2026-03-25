@@ -22,8 +22,9 @@ public String sendSimpleMail(EmailDTO emaildetails) {
 try {
     SimpleMailMessage simpleMailMessage  = new SimpleMailMessage();
     simpleMailMessage.setFrom(sender);
-    simpleMailMessage.setSubject("Your studio has been booked!");
-    simpleMailMessage.setTo(emaildetails.getStudioRecipient());
+    simpleMailMessage.setSubject(emaildetails.getSubject());
+    simpleMailMessage.setText(emaildetails.getText());
+    simpleMailMessage.setTo(emaildetails.getTo());
     javaMailSender.send(simpleMailMessage);
     return "Mail sent to the studio!";
 } catch (Exception e) {

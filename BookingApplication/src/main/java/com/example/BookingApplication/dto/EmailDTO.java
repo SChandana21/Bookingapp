@@ -21,5 +21,10 @@ public class EmailDTO {
 
     private String studioRecipient;
 
+    private String subject;
+
+    private String text;
+
+    private String to;
 
 }

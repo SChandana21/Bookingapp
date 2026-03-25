@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Service
 public class PaymentService {
 
@@ -17,7 +19,7 @@ public class PaymentService {
 
 
 
-    public String checkOut(PaymentDTO paymentDTO) {
+    public Map<String, String> checkOut(PaymentDTO paymentDTO, String userId, String expiryTime) {
 
         Stripe.apiKey = secretkey;
 
@@ -49,16 +51,19 @@ public class PaymentService {
                         .build();
 
         SessionCreateParams params =
-                SessionCreateParams.builder().putMetadata("bookingId",paymentDTO.getBookingId() != null ? paymentDTO.getBookingId() : "unknown")
+                SessionCreateParams.builder().putMetadata("bookingId",paymentDTO.getBookingId() != null ? paymentDTO.getBookingId() : "unknown").putMetadata("userId", userId).putMetadata("expiry", expiryTime)
                         .setMode(SessionCreateParams.Mode.PAYMENT)
-                        .setSuccessUrl("http://localhost:8080/success")
+                        .setSuccessUrl("http://localhost:3000/success")
                         .setCancelUrl("http://localhost:8080/cancel")
                         .addLineItem(lineItem)
                         .build();
 
         try {
             Session session = Session.create(params);
-            return session.getUrl();
+            return Map.of(
+                    "url", session.getUrl(),
+                    "sessionId", session.getId()
+            );
         } catch (StripeException e) {
             throw new RuntimeException("Stripe Error: " + e.getMessage());
         }

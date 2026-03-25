@@ -25,8 +25,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.awt.print.Book;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.example.BookingApplication.Enum.BookingStatus.EXPIRED;
@@ -74,12 +77,12 @@ public class MemberService {
     }
 
     public boolean ValidRequest(BookingDTO bookingDto) {
-        if (bookingDto.getStartTime().isBefore(bookingDto.getEndTime()) && bookingDto.getEndTime().getMinute() - bookingDto.getStartTime().getMinute() >= 30)
+        if (bookingDto.getStartTime().isBefore(bookingDto.getEndTime()) && Duration.between(bookingDto.getStartTime(), bookingDto.getEndTime()).toMinutes() >= 30)
             return true;
         return false;
     }
 
-    public String CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
+    public Map<String, String> CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
         boolean conflictDetection = ConflictDetection(bookingDto);
         if (conflictDetection)
             throw new SlotBookedException("Slot Booked");
@@ -92,6 +95,7 @@ public class MemberService {
         String memberId = member.getId();
         Bookings booking = new Bookings();
         booking.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        String str = booking.getExpiresAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         booking.setCreatedAt(LocalDateTime.now());
         booking.setAmount(bookingDto.getAmount());
         booking.setStartTime(bookingDto.getStartTime());
@@ -100,19 +104,25 @@ public class MemberService {
         booking.setStudioId(bookingDto.getStudioId());
         booking.setUserId(memberId);
         Bookings saved = null;
-        try {
+
             boolean locked = redisconfig.AcquireLock(
                     bookingDto.getStudioId(),
                     bookingDto.getStartTime(),
                     bookingDto.getEndTime()
             );
 
-            if (!locked)
+            if (!locked) {
                 throw new SlotBookedException("Slot already locked");
-
+            }
+        try {
             saved = bookingsRepository.save(booking);
-        } catch (Exception e) {
-            throw new SlotBookedException("Slot booked already");
+
+        } finally {
+            redisconfig.releaseLock(
+                    bookingDto.getStudioId(),
+                    bookingDto.getStartTime(),
+                    bookingDto.getEndTime()
+            );
         }
         String bookingId = saved.getId();
             studioQuery.ScheduleCancelled();
@@ -121,13 +131,13 @@ public class MemberService {
             paymentDTO.setName(bookingDto.getStudioId());
             paymentDTO.setQuantity(1L);
             paymentDTO.setAmount(10000L);
-            String paymentUrl = paymentService.checkOut(paymentDTO);
+            Map<String, String> paymentUrl = paymentService.checkOut(paymentDTO, memberId, str);
         return paymentUrl;
 
     }
 
 
-    public boolean ConfirmBooking(String BookingId) {
+    public boolean ConfirmBooking(String BookingId, String userId)   {
         boolean Bookingstatus = false;
         ObjectId id = new ObjectId(BookingId);
         Bookings Bookingtoconfirm = bookingsRepository.findById(id).orElseThrow(() -> new RuntimeException("Booking not found"));
@@ -135,21 +145,33 @@ public class MemberService {
             if (Bookingtoconfirm.getExpiresAt().isAfter(LocalDateTime.now())) {
                 Bookingtoconfirm.setStatus(BookingStatus.CONFIRMED);
                 bookingsRepository.save(Bookingtoconfirm);
+                ObjectId userIdo = new ObjectId(userId);
+                User byName = userRepository.findById(userIdo).orElse(null);
+
+                String studioId = Bookingtoconfirm.getStudioId();
+                ObjectId studioid = new ObjectId(studioId);
+                Studio byId = studioRepository.findById(studioid).orElse(null);
+                String recipient = (byId.getStudiorecipient());
                 Bookingstatus = true;
                 EmailDTO emailDTO = new EmailDTO();
                 emailDTO.setBookingId(Bookingtoconfirm.getId());
                 emailDTO.setStarttime(Bookingtoconfirm.getStartTime());
                 emailDTO.setEndTime(Bookingtoconfirm.getEndTime());
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
-                User byName = userRepository.findByName(username);
-                String id1 = byName.getId();
-                String studioId = Bookingtoconfirm.getStudioId();
-                ObjectId studioid = new ObjectId(studioId);
-                Studio byId = studioRepository.findById(studioid).orElse(null);
-                String recipient = (byId.getStudiorecipient()); //fallback
-                emailDTO.setUserId(id1);
+                emailDTO.setTo(recipient);
+                emailDTO.setText("Your studio has been booked!"+ "at" +  Bookingtoconfirm.getStartTime() + "till" + Bookingtoconfirm.getEndTime() + "by" + Bookingtoconfirm.getUserId());
+                String userEmail = byName.getEmail();
+                emailDTO.setUserId(userId);
                 emailDTO.setStudioRecipient(recipient);
                 emailServiceIMPL.sendSimpleMail(emailDTO);
+                EmailDTO userEmailsend = new EmailDTO();
+                userEmailsend.setTo(userEmail);
+                userEmailsend.setStudioRecipient(recipient);
+                userEmailsend.setBookingId(Bookingtoconfirm.getId());
+                userEmailsend.setStarttime(Bookingtoconfirm.getStartTime());
+                userEmailsend.setEndTime(Bookingtoconfirm.getEndTime());
+                userEmailsend.setSubject("Booking Confirmation");
+                userEmailsend.setText("Congratulations you booked " + byId.getName() + "at" + Bookingtoconfirm.getStartTime() + Bookingtoconfirm.getEndTime());
+                emailServiceIMPL.sendSimpleMail(userEmailsend);
             } else {
                 //log
                 System.out.println("expired, ignored payment!");

@@ -4,6 +4,7 @@ import com.example.BookingApplication.Entity.User;
 import com.example.BookingApplication.JwtUtil.Jwtutil;
 import com.example.BookingApplication.Repositories.UserRepository;
 import com.example.BookingApplication.Service.UserDetailsImpl;
+import com.example.BookingApplication.Validation.JWTExpiredException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -41,6 +42,8 @@ public class Filterjwt extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
+                } else {
+                    throw new JWTExpiredException("Your session expired, Please login again");
                 }
 
         }

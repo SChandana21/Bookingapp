@@ -56,7 +56,18 @@ public class WebhookController {
             Gson gson = new Gson();
             JsonObject jsonObject = gson.fromJson(rawJson, JsonObject.class);
 
-            String sessionId = jsonObject.get("id").getAsString();
+           // String sessionId = jsonObject.get("id").getAsString();
+            String userId = null;
+
+            if (jsonObject.has("metadata") &&
+                    jsonObject.get("metadata").getAsJsonObject().has("userId")) {
+
+                userId = jsonObject.get("metadata")
+                        .getAsJsonObject()
+                        .get("userId")
+                        .getAsString();
+            }
+            System.out.println(userId);
             String bookingId = null;
             if (jsonObject.has("metadata") &&
                     jsonObject.get("metadata").getAsJsonObject().has("bookingId")) {
@@ -68,13 +79,14 @@ public class WebhookController {
             }
             String paymentStatus = jsonObject.get("payment_status").getAsString();
             System.out.println("✅ Payment success!");
-            System.out.println("Session ID: " + sessionId);
+            //System.out.println("Session ID: " + sessionId);
             System.out.println("Payment Status: " + paymentStatus);
             System.out.println("Booking Status" + bookingId);
+            System.out.println("userId" + userId);
 
             if ("paid".equals(paymentStatus) && bookingId != null) {
                 System.out.println("🎯 Confirm booking for ID: " + bookingId);
-                memberService.ConfirmBooking(bookingId);
+                memberService.ConfirmBooking(bookingId, userId);
                 
 
             }

@@ -24,7 +24,8 @@ public class SpringSecurity {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.csrf(csrf -> csrf.disable())
+        httpSecurity.cors(cors -> {})
+        .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/Booking/**").authenticated()
                         .anyRequest().permitAll()).addFilterBefore(jwtFilter,
                 UsernamePasswordAuthenticationFilter.class);

@@ -37,12 +37,10 @@ public class StudioQuery {
 
     @Scheduled(fixedRate = 60000)
     public void ScheduleCancelled() {
-        Criteria expiredBooking = Criteria.where("status").is("PENDING");
+            Criteria expiredBooking = Criteria.where("status").is("PENDING");
         Query query = new Query(expiredBooking);
         List<Bookings> bookings = mongoTemplate.find(query, Bookings.class);
-
         for (Bookings booking : bookings) {
-
             if (booking.getExpiresAt().isBefore(LocalDateTime.now())) {
                 booking.setStatus(BookingStatus.EXPIRED);
                 booking.setStudioId("EXPIRED_" + booking.getStudioId());

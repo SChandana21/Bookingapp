@@ -1,19 +1,22 @@
 package com.example.BookingApplication.Controllers;
 
+import com.example.BookingApplication.Entity.Studio;
 import com.example.BookingApplication.Entity.User;
+import com.example.BookingApplication.Service.MemberService;
 import com.example.BookingApplication.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/getstarted")
 public class PublicControllers {
 
+    @Autowired
+    private MemberService memberService;
     @Autowired
     private UserService userService;
 
@@ -37,6 +40,16 @@ public class PublicControllers {
             return new ResponseEntity<>(HttpStatus.CONFLICT);
         }
 
+    }
+
+    @GetMapping("/List")
+    public ResponseEntity<?> GetallStudios() {
+        try {
+            List<Studio> studios = memberService.GetallStudios();
+            return new ResponseEntity<>(studios, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
 

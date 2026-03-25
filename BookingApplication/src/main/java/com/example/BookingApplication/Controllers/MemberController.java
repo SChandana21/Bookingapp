@@ -7,12 +7,15 @@ import com.example.BookingApplication.Service.UserService;
 import com.example.BookingApplication.Validation.SlotBookedException;
 import com.example.BookingApplication.dto.BookingDTO;
 import com.example.BookingApplication.dto.PaymentDTO;
+import com.stripe.exception.StripeException;
+import com.stripe.model.checkout.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/Booking")
@@ -23,9 +26,9 @@ private MemberService memberService;
 @Autowired
 private PaymentService paymentService;
 @PostMapping("/new")
-public ResponseEntity<String> CreateBooking (@RequestBody  BookingDTO bookingDTO) {
-    String checkoutUrl = memberService.CreateBooking(bookingDTO);
-    return new ResponseEntity<>(checkoutUrl,    HttpStatus.CREATED);
+public ResponseEntity<Map<String, String>> CreateBooking (@RequestBody  BookingDTO bookingDTO) {
+    Map<String, String> createdBooking = memberService.CreateBooking(bookingDTO);
+    return new ResponseEntity<>(createdBooking, HttpStatus.CREATED);
         }
 
  @DeleteMapping("/cancelBooking")
@@ -36,10 +39,18 @@ public ResponseEntity<String> CreateBooking (@RequestBody  BookingDTO bookingDTO
      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
  }
 
- @PostMapping("/checkout")
- public String Checkout(PaymentDTO paymentDTO) {
-    return paymentService.checkOut(paymentDTO);
- }
+    @GetMapping("/payment/session/{sessionId}")
+    public Map<String, String> getSession(@PathVariable String sessionId) {
+    try {
+        Session session = Session.retrieve(sessionId);
+        String expiry = session.getMetadata().get("expiry");
+
+        return Map.of("expiry", expiry);
+    } catch (StripeException e) {
+        throw new RuntimeException(e);
+    }
+    }
+
 
     @GetMapping("/List")
     public ResponseEntity<?> GetallStudios() {
