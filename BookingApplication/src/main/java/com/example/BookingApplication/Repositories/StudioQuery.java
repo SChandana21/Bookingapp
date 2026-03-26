@@ -1,11 +1,14 @@
 package com.example.BookingApplication.Repositories;
 import com.example.BookingApplication.Entity.Bookings;
+import com.example.BookingApplication.Entity.User;
 import com.example.BookingApplication.dto.BookingDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import com.example.BookingApplication.Enum.BookingStatus;
 
@@ -18,7 +21,8 @@ import static com.example.BookingApplication.Enum.BookingStatus.EXPIRED;
 public class StudioQuery {
     @Autowired
     private MongoTemplate mongoTemplate;
-
+    @Autowired
+    private UserRepository userRepository;
 
     public boolean FindConflictBookings(BookingDTO currentBooking) {
         boolean conflict = false;
@@ -57,5 +61,19 @@ public class StudioQuery {
     query.addCriteria(new Criteria().andOperator(FindStudio, findStarttime, findendTime));
         List<Bookings> bookings = mongoTemplate.find(query, Bookings.class);
         return bookings;
+    }
+
+    public List<Bookings> FindUserBookings() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentuser = null;
+        if (authentication != null && authentication.isAuthenticated()) {
+            String name = authentication.getName();
+            currentuser = userRepository.findByName(name);
+            Criteria userCriteria = Criteria.where("userId").is(currentuser.getId());
+            Query userBookings = new Query(userCriteria);
+            List<Bookings> bookings = mongoTemplate.find(userBookings, Bookings.class);
+            return bookings;
+        }
+        throw new RuntimeException("Not an Authenticated User"); //validation
     }
 }

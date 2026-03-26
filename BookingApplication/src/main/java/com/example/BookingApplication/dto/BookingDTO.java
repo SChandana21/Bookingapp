@@ -15,6 +15,7 @@ public class BookingDTO {
     private LocalDateTime endTime;
     private BookingStatus status;
 
+
     private double amount;
 
     private LocalDateTime createdAt;

@@ -102,6 +102,9 @@ public class MemberService {
         booking.setEndTime(bookingDto.getEndTime());
         booking.setStatus(PENDING);
         booking.setStudioId(bookingDto.getStudioId());
+        ObjectId studioId = new ObjectId(bookingDto.getStudioId());
+        Studio selectedStudio  = studioRepository.findById(studioId).orElse(null);
+        booking.setStudioName(selectedStudio.getName());
         booking.setUserId(memberId);
         Bookings saved = null;
 
@@ -209,6 +212,8 @@ public class MemberService {
         List<Studio> studioList = studioRepository.findAll();
         return studioList;
     }
+
+
 
 
 }

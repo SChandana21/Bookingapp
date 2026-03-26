@@ -35,4 +35,5 @@ public class Bookings {
     private double amount;
 
     private LocalDateTime createdAt;
+    private String studioName;
 }

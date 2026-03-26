@@ -13,4 +13,5 @@ public class PaymentDTO {
     private String name;
     private String currency;
     private String bookingId;
+
 }

@@ -4,6 +4,7 @@ import com.example.BookingApplication.Entity.Bookings;
 import com.example.BookingApplication.Entity.Studio;
 import com.example.BookingApplication.Enum.BookingStatus;
 import com.example.BookingApplication.Repositories.BookingsRepository;
+import com.example.BookingApplication.Repositories.StudioQuery;
 import com.example.BookingApplication.Service.MemberService;
 import com.example.BookingApplication.Service.PaymentService;
 import com.example.BookingApplication.Service.UserService;
@@ -31,6 +32,9 @@ private BookingsRepository bookingsRepository;
 
 @Autowired
 private PaymentService paymentService;
+
+@Autowired
+private StudioQuery studioQuery;
 @PostMapping("/new")
 public ResponseEntity<Map<String, String>> CreateBooking (@RequestBody  BookingDTO bookingDTO) {
     Map<String, String> createdBooking = memberService.CreateBooking(bookingDTO);
@@ -83,6 +87,17 @@ public ResponseEntity<Map<String, String>> CreateBooking (@RequestBody  BookingD
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
+
+
+    @GetMapping("/Mybookings")
+    public ResponseEntity<List<Bookings>> GetMyBookings() {
+    try {
+        List<Bookings> bookings = studioQuery.FindUserBookings();
+        return new ResponseEntity<>(bookings, HttpStatus.CREATED);
+    } catch (Exception e) {
+        throw new RuntimeException(e);      //change exception
+    }
     }
     }
 
