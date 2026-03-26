@@ -9,13 +9,19 @@ pipeline {
 
         stage('Build') {
             steps {
-                bat 'mvn clean install'
+                dir('BookingApplication') {
+                    bat 'mvn clean install'
+                }
+
             }
         }
 
         stage('Test') {
             steps {
-                bat 'mvn test'
+                dir('BookingApplication') {
+                    bat 'mvn test'
+                }
+
             }
         }
 
