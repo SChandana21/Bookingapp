@@ -1,5 +1,7 @@
 package com.example.BookingApplication.Service;
 
+import com.example.BookingApplication.Entity.Bookings;
+import com.example.BookingApplication.Repositories.BookingsRepository;
 import com.example.BookingApplication.dto.PaymentDTO;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -17,9 +19,10 @@ public class PaymentService {
     @Value("${Stripe_api_key}")
     private String secretkey;
 
+    @Autowired
+    private BookingsRepository bookingsRepository;
 
-
-    public Map<String, String> checkOut(PaymentDTO paymentDTO, String userId, String expiryTime) {
+    public Map<String, String> checkOut(PaymentDTO paymentDTO, String userId, String expiryTime, Bookings booking) {
 
         Stripe.apiKey = secretkey;
 
@@ -53,13 +56,17 @@ public class PaymentService {
         SessionCreateParams params =
                 SessionCreateParams.builder().putMetadata("bookingId",paymentDTO.getBookingId() != null ? paymentDTO.getBookingId() : "unknown").putMetadata("userId", userId).putMetadata("expiry", expiryTime)
                         .setMode(SessionCreateParams.Mode.PAYMENT)
-                        .setSuccessUrl("http://localhost:3000/success")
+                        .setSuccessUrl("http://localhost:3000/checkout")
                         .setCancelUrl("http://localhost:8080/cancel")
                         .addLineItem(lineItem)
                         .build();
 
         try {
             Session session = Session.create(params);
+            String sessionId = session.getId();
+            booking.setSessionId(sessionId);
+            bookingsRepository.save(booking);
+
             return Map.of(
                     "url", session.getUrl(),
                     "sessionId", session.getId()

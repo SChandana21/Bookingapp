@@ -1,6 +1,9 @@
 package com.example.BookingApplication.Controllers;
 
+import com.example.BookingApplication.Entity.Bookings;
 import com.example.BookingApplication.Entity.Studio;
+import com.example.BookingApplication.Enum.BookingStatus;
+import com.example.BookingApplication.Repositories.BookingsRepository;
 import com.example.BookingApplication.Service.MemberService;
 import com.example.BookingApplication.Service.PaymentService;
 import com.example.BookingApplication.Service.UserService;
@@ -24,6 +27,9 @@ public class MemberController {
 private MemberService memberService;
 
 @Autowired
+private BookingsRepository bookingsRepository;
+
+@Autowired
 private PaymentService paymentService;
 @PostMapping("/new")
 public ResponseEntity<Map<String, String>> CreateBooking (@RequestBody  BookingDTO bookingDTO) {
@@ -42,13 +48,30 @@ public ResponseEntity<Map<String, String>> CreateBooking (@RequestBody  BookingD
     @GetMapping("/payment/session/{sessionId}")
     public Map<String, String> getSession(@PathVariable String sessionId) {
     try {
-        Session session = Session.retrieve(sessionId);
-        String expiry = session.getMetadata().get("expiry");
+        Bookings booking = bookingsRepository.findBySessionId(sessionId);
+        if (booking == null || booking.getExpiresAt() == null)
+            return Map.of("expiry", "0");
 
-        return Map.of("expiry", expiry);
-    } catch (StripeException e) {
+        return Map.of("expiry", booking.getExpiresAt().toString());
+    } catch (Exception e) {
         throw new RuntimeException(e);
     }
+    }
+
+    @GetMapping("/payment/status/{sessionId}")
+    public Map<String, String> getStatus(@PathVariable String sessionId) {
+
+        Bookings booking = bookingsRepository.findBySessionId(sessionId);
+
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            return Map.of("status", "paid");
+        }
+
+        if (booking.getStatus() == BookingStatus.EXPIRED) {
+            return Map.of("status", "expired");
+        }
+
+        return Map.of("status", "pending");
     }
 
 

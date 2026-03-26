@@ -21,7 +21,7 @@ public class Bookings {
 
     @Id
     private String id;
-
+    private String sessionId;
     private String userId;
     private String studioId;
 

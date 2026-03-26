@@ -56,7 +56,11 @@ public class WebhookController {
             Gson gson = new Gson();
             JsonObject jsonObject = gson.fromJson(rawJson, JsonObject.class);
 
-           // String sessionId = jsonObject.get("id").getAsString();
+            String sessionId = jsonObject.has("id")
+                    ? jsonObject.get("id").getAsString()
+                    : null;
+
+
             String userId = null;
 
             if (jsonObject.has("metadata") &&
@@ -79,7 +83,7 @@ public class WebhookController {
             }
             String paymentStatus = jsonObject.get("payment_status").getAsString();
             System.out.println("✅ Payment success!");
-            //System.out.println("Session ID: " + sessionId);
+            System.out.println("Session ID: " + sessionId);
             System.out.println("Payment Status: " + paymentStatus);
             System.out.println("Booking Status" + bookingId);
             System.out.println("userId" + userId);

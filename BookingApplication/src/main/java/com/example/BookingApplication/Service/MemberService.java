@@ -131,7 +131,7 @@ public class MemberService {
             paymentDTO.setName(bookingDto.getStudioId());
             paymentDTO.setQuantity(1L);
             paymentDTO.setAmount(10000L);
-            Map<String, String> paymentUrl = paymentService.checkOut(paymentDTO, memberId, str);
+            Map<String, String> paymentUrl = paymentService.checkOut(paymentDTO, memberId, str, booking);
         return paymentUrl;
 
     }
@@ -142,8 +142,13 @@ public class MemberService {
         ObjectId id = new ObjectId(BookingId);
         Bookings Bookingtoconfirm = bookingsRepository.findById(id).orElseThrow(() -> new RuntimeException("Booking not found"));
         if (Bookingtoconfirm.getStatus() == PENDING) {
-            if (Bookingtoconfirm.getExpiresAt().isAfter(LocalDateTime.now())) {
+            if (Bookingtoconfirm.getExpiresAt() != null && Bookingtoconfirm.getExpiresAt().plusSeconds(30).isBefore(LocalDateTime.now())) {
+                Bookingtoconfirm.setStatus(EXPIRED);
+                bookingsRepository.save(Bookingtoconfirm);
+                return false;
+            } else {
                 Bookingtoconfirm.setStatus(BookingStatus.CONFIRMED);
+                Bookingtoconfirm.setExpiresAt(null);
                 bookingsRepository.save(Bookingtoconfirm);
                 ObjectId userIdo = new ObjectId(userId);
                 User byName = userRepository.findById(userIdo).orElse(null);
@@ -172,9 +177,7 @@ public class MemberService {
                 userEmailsend.setSubject("Booking Confirmation");
                 userEmailsend.setText("Congratulations you booked " + byId.getName() + "at" + Bookingtoconfirm.getStartTime() + Bookingtoconfirm.getEndTime());
                 emailServiceIMPL.sendSimpleMail(userEmailsend);
-            } else {
-                //log
-                System.out.println("expired, ignored payment!");
+
             }
         }
         return Bookingstatus;
