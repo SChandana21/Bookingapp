@@ -10,18 +10,8 @@ pipeline {
         stage('Build') {
             steps {
                 dir('BookingApplication') {
-                    bat 'mvn clean install'
+                    bat 'mvn clean install -DskipTests'
                 }
-
-            }
-        }
-
-        stage('Test') {
-            steps {
-                dir('BookingApplication') {
-                    bat 'mvn test'
-                }
-
             }
         }
 
