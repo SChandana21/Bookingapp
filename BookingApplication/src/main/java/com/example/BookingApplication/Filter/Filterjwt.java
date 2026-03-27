@@ -51,14 +51,16 @@ public class Filterjwt extends OncePerRequestFilter {
 
 
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write("{\"message\": \"JWT Expired\"}");
             return;
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.setContentType("application/json");
-            response.getWriter().write("{\"message\": \"JWT expired\"}");
+            response.getWriter().write("{\"message\": \"Server Error\"}");
             return;
         }
     }

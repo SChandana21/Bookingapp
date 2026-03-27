@@ -1,8 +1,6 @@
 package com.example.BookingApplication.ExceptionHandler;
 
-import com.example.BookingApplication.Validation.InvalidtimeException;
-import com.example.BookingApplication.Validation.JWTExpiredException;
-import com.example.BookingApplication.Validation.SlotBookedException;
+import com.example.BookingApplication.Validation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,4 +24,25 @@ public class GlobalHandlerException {
     public ResponseEntity<String> handleJWTexpired(JWTExpiredException ex) {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler
+    public ResponseEntity<String> handleUserNotFoundException(UserNotFoundException ex) {
+        return  new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<String> handleUserAlreadyExisting(UserAlreadyExistsException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<String> EmptyDetailsException(EmptyDetailsException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleGeneral(Exception ex) {
+        return ResponseEntity.status(500).body("Something went wrong");
+    }
+
 }

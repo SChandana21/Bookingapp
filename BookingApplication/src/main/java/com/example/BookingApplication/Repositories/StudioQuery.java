@@ -1,6 +1,7 @@
 package com.example.BookingApplication.Repositories;
 import com.example.BookingApplication.Entity.Bookings;
 import com.example.BookingApplication.Entity.User;
+import com.example.BookingApplication.Redis.Redisconfig;
 import com.example.BookingApplication.dto.BookingDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -15,14 +16,15 @@ import com.example.BookingApplication.Enum.BookingStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.example.BookingApplication.Enum.BookingStatus.EXPIRED;
-
 @Component
 public class StudioQuery {
     @Autowired
     private MongoTemplate mongoTemplate;
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private Redisconfig redisconfig;
 
     public boolean FindConflictBookings(BookingDTO currentBooking) {
         boolean conflict = false;
@@ -41,15 +43,27 @@ public class StudioQuery {
 
     @Scheduled(fixedRate = 60000)
     public void ScheduleCancelled() {
-            Criteria expiredBooking = Criteria.where("status").is("PENDING");
-        Query query = new Query(expiredBooking);
+        Criteria criteria = new Criteria().andOperator(
+                Criteria.where("status").is("PENDING"),
+                Criteria.where("expiresAt").lt(LocalDateTime.now())
+        );
+
+        Query query = new Query(criteria);
+
         List<Bookings> bookings = mongoTemplate.find(query, Bookings.class);
+
         for (Bookings booking : bookings) {
-            if (booking.getExpiresAt().isBefore(LocalDateTime.now())) {
-                booking.setStatus(BookingStatus.EXPIRED);
-                booking.setStudioId("EXPIRED_" + booking.getStudioId());
-                mongoTemplate.save(booking);
-            }
+
+            booking.setStatus(BookingStatus.EXPIRED);
+
+
+            redisconfig.releaseLock(
+                    booking.getStudioId(),
+                    booking.getStartTime(),
+                    booking.getEndTime()
+            );
+
+            mongoTemplate.save(booking);
         }
     }
 

@@ -29,7 +29,7 @@ public class PaymentService {
 
         String name = paymentDTO.getName() != null ? paymentDTO.getName() : "Booking";
         Long amount = paymentDTO.getAmount() != null && paymentDTO.getAmount() > 0
-                ? paymentDTO.getAmount()
+                ?  paymentDTO.getAmount() * 100
                 : 10000L; // fallback ₹1
         Long quantity = paymentDTO.getQuantity() != null && paymentDTO.getQuantity() > 0
                 ? paymentDTO.getQuantity()

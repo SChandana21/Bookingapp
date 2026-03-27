@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.print.Book;
 import java.time.Duration;
@@ -56,9 +57,9 @@ public class MemberService {
     @Autowired
     private EmailServiceIMPL emailServiceIMPL;
 
-
     @Autowired
     private Redisconfig redisconfig;
+
   @Autowired
   private PaymentService paymentService;
 
@@ -81,7 +82,7 @@ public class MemberService {
             return true;
         return false;
     }
-
+@Transactional
     public Map<String, String> CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
         boolean conflictDetection = ConflictDetection(bookingDto);
         if (conflictDetection)
@@ -119,13 +120,8 @@ public class MemberService {
             }
         try {
             saved = bookingsRepository.save(booking);
-
-        } finally {
-            redisconfig.releaseLock(
-                    bookingDto.getStudioId(),
-                    bookingDto.getStartTime(),
-                    bookingDto.getEndTime()
-            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         String bookingId = saved.getId();
             studioQuery.ScheduleCancelled();
@@ -133,54 +129,36 @@ public class MemberService {
             paymentDTO.setBookingId(bookingId);
             paymentDTO.setName(bookingDto.getStudioId());
             paymentDTO.setQuantity(1L);
-            paymentDTO.setAmount(10000L);
+        double amountd = bookingDto.getAmount();
+        Long amount = (long) amountd;
+    paymentDTO.setAmount(amount);
             Map<String, String> paymentUrl = paymentService.checkOut(paymentDTO, memberId, str, booking);
         return paymentUrl;
 
     }
 
-
+    @Transactional
     public boolean ConfirmBooking(String BookingId, String userId)   {
         boolean Bookingstatus = false;
         ObjectId id = new ObjectId(BookingId);
         Bookings Bookingtoconfirm = bookingsRepository.findById(id).orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (Bookingtoconfirm.getStatus() == BookingStatus.CONFIRMED) {
+            return true;
+        }
+
         if (Bookingtoconfirm.getStatus() == PENDING) {
             if (Bookingtoconfirm.getExpiresAt() != null && Bookingtoconfirm.getExpiresAt().plusSeconds(30).isBefore(LocalDateTime.now())) {
                 Bookingtoconfirm.setStatus(EXPIRED);
+
                 bookingsRepository.save(Bookingtoconfirm);
                 return false;
             } else {
                 Bookingtoconfirm.setStatus(BookingStatus.CONFIRMED);
                 Bookingtoconfirm.setExpiresAt(null);
                 bookingsRepository.save(Bookingtoconfirm);
-                ObjectId userIdo = new ObjectId(userId);
-                User byName = userRepository.findById(userIdo).orElse(null);
-
-                String studioId = Bookingtoconfirm.getStudioId();
-                ObjectId studioid = new ObjectId(studioId);
-                Studio byId = studioRepository.findById(studioid).orElse(null);
-                String recipient = (byId.getStudiorecipient());
+               SendEmail(Bookingtoconfirm, userId);
                 Bookingstatus = true;
-                EmailDTO emailDTO = new EmailDTO();
-                emailDTO.setBookingId(Bookingtoconfirm.getId());
-                emailDTO.setStarttime(Bookingtoconfirm.getStartTime());
-                emailDTO.setEndTime(Bookingtoconfirm.getEndTime());
-                emailDTO.setTo(recipient);
-                emailDTO.setText("Your studio has been booked!"+ "at" +  Bookingtoconfirm.getStartTime() + "till" + Bookingtoconfirm.getEndTime() + "by" + Bookingtoconfirm.getUserId());
-                String userEmail = byName.getEmail();
-                emailDTO.setUserId(userId);
-                emailDTO.setStudioRecipient(recipient);
-                emailServiceIMPL.sendSimpleMail(emailDTO);
-                EmailDTO userEmailsend = new EmailDTO();
-                userEmailsend.setTo(userEmail);
-                userEmailsend.setStudioRecipient(recipient);
-                userEmailsend.setBookingId(Bookingtoconfirm.getId());
-                userEmailsend.setStarttime(Bookingtoconfirm.getStartTime());
-                userEmailsend.setEndTime(Bookingtoconfirm.getEndTime());
-                userEmailsend.setSubject("Booking Confirmation");
-                userEmailsend.setText("Congratulations you booked " + byId.getName() + "at" + Bookingtoconfirm.getStartTime() + Bookingtoconfirm.getEndTime());
-                emailServiceIMPL.sendSimpleMail(userEmailsend);
-
             }
         }
         return Bookingstatus;
@@ -214,6 +192,35 @@ public class MemberService {
     }
 
 
+    @Transactional
+    public void SendEmail (Bookings Bookingdone, String userId) {
+        EmailDTO emailDTO = new EmailDTO();
+        emailDTO.setBookingId(Bookingdone.getId());
+        emailDTO.setStarttime(Bookingdone.getStartTime());
+        emailDTO.setEndTime(Bookingdone.getEndTime());
+        ObjectId userIdo = new ObjectId(userId);
+        User byName = userRepository.findById(userIdo).orElse(null);
+
+        String studioId = Bookingdone.getStudioId();
+        ObjectId studioid = new ObjectId(studioId);
+        Studio byId = studioRepository.findById(studioid).orElse(null);
+        String recipient = (byId.getStudiorecipient());
+        emailDTO.setTo(recipient);
+        emailDTO.setText("Your studio has been booked!"+ "at" +  Bookingdone.getStartTime() + "till" + Bookingdone.getEndTime() + "by" + Bookingdone.getUserId());
+        String userEmail = byName.getEmail();
+        emailDTO.setUserId(userId);
+        emailDTO.setStudioRecipient(recipient);
+        emailServiceIMPL.sendSimpleMail(emailDTO);
+        EmailDTO userEmailsend = new EmailDTO();
+        userEmailsend.setTo(userEmail);
+        userEmailsend.setStudioRecipient(recipient);
+        userEmailsend.setBookingId(Bookingdone.getId());
+        userEmailsend.setStarttime(Bookingdone.getStartTime());
+        userEmailsend.setEndTime(Bookingdone.getEndTime());
+        userEmailsend.setSubject("Booking Confirmation");
+        userEmailsend.setText("Congratulations you booked " + byId.getName() + "at" + Bookingdone.getStartTime() + Bookingdone.getEndTime());
+        emailServiceIMPL.sendSimpleMail(userEmailsend);
+    }
 
 
 }

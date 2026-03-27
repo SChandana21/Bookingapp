@@ -13,6 +13,7 @@ import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,10 @@ public class WebhookController {
     private RedisTemplate redisTemplate;
     @Autowired
     private MemberService memberService;
-    private final String endpointSecret = "whsec_39477388743e3c28c9f0fda189f0d745191ff8ab322141f4f52968049fa487f6"; // replace with your CLI secret
+
+
+    @Value("${EndPoint_Secret}")
+    private  String endpointSecret;
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleWebhook(@RequestBody String payload,
@@ -41,12 +45,12 @@ public class WebhookController {
         try {
             event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
         } catch (SignatureVerificationException e) {
-            System.out.println("❌ Invalid signature");
+            System.out.println("Invalid signature");
             return ResponseEntity.badRequest().body("Invalid signature");
         }
 
 
-        System.out.println("📩 Webhook received: " + event.getType());
+        System.out.println(" Webhook received: " + event.getType());
 
 
         if ("checkout.session.completed".equals(event.getType())) {
@@ -82,14 +86,14 @@ public class WebhookController {
                         .getAsString();
             }
             String paymentStatus = jsonObject.get("payment_status").getAsString();
-            System.out.println("✅ Payment success!");
+            System.out.println(" Payment success!");
             System.out.println("Session ID: " + sessionId);
             System.out.println("Payment Status: " + paymentStatus);
             System.out.println("Booking Status" + bookingId);
             System.out.println("userId" + userId);
 
             if ("paid".equals(paymentStatus) && bookingId != null) {
-                System.out.println("🎯 Confirm booking for ID: " + bookingId);
+                System.out.println(" Confirm booking for ID: " + bookingId);
                 memberService.ConfirmBooking(bookingId, userId);
                 
 

@@ -1,0 +1,4 @@
+spring.mongodb.uri = MongoDB Database URI
+spring.mail.host = Mail Host (SMTP etc)
+spring.mail.port = PORT of mail
+spring.mail.username = Mail username
