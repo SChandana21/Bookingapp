@@ -1,6 +1,7 @@
 package com.example.BookingApplication.Entity;
 
 import com.example.BookingApplication.Enum.BookingStatus;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
@@ -26,6 +27,7 @@ public class Bookings {
     private String studioId;
 
     private LocalDateTime startTime;
+
     private LocalDateTime endTime;
 
     private LocalDateTime expiresAt;

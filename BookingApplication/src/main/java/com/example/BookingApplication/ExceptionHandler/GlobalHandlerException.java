@@ -45,4 +45,9 @@ public class GlobalHandlerException {
         return ResponseEntity.status(500).body("Something went wrong");
     }
 
+    @ExceptionHandler(InvalidDetailsException.class)
+    public ResponseEntity<?> handleInvalid(InvalidDetailsException ex) {
+        return ResponseEntity.status(500).body("Can't Book in the Past");
+    }
+
 }

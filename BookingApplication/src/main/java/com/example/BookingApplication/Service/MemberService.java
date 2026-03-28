@@ -9,6 +9,7 @@ import com.example.BookingApplication.Repositories.BookingsRepository;
 import com.example.BookingApplication.Repositories.StudioQuery;
 import com.example.BookingApplication.Repositories.StudioRepository;
 import com.example.BookingApplication.Repositories.UserRepository;
+import com.example.BookingApplication.Validation.InvalidDetailsException;
 import com.example.BookingApplication.Validation.InvalidtimeException;
 import com.example.BookingApplication.Validation.SlotBookedException;
 import com.example.BookingApplication.dto.BookingDTO;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.awt.print.Book;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -78,9 +80,28 @@ public class MemberService {
     }
 
     public boolean ValidRequest(BookingDTO bookingDto) {
-        if (bookingDto.getStartTime().isBefore(bookingDto.getEndTime()) && Duration.between(bookingDto.getStartTime(), bookingDto.getEndTime()).toMinutes() >= 30)
-            return true;
-        return false;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        LocalDateTime start = bookingDto.getStartTime();
+        LocalDateTime end = bookingDto.getEndTime();
+
+        if (start == null || end == null) {
+            throw new RuntimeException("Invalid time");
+        }
+
+        if (start.isBefore(now)) {
+            throw new RuntimeException("Cannot book in past");
+        }
+
+        if (!end.isAfter(start)) {
+            throw new RuntimeException("Invalid time range");
+        }
+
+        if (Duration.between(start, end).toMinutes() < 30) {
+            throw new RuntimeException("Minimum 30 mins required");
+        }
+        return true;
     }
 @Transactional
     public Map<String, String> CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
@@ -88,9 +109,9 @@ public class MemberService {
         if (conflictDetection)
             throw new SlotBookedException("Slot Booked");
 
-        boolean validateRequest = ValidRequest(bookingDto);
-        if (!validateRequest)
-            throw new InvalidtimeException("Please Check your time Slots, Minimum Duration must be 30minutes");
+        if (!ValidRequest(bookingDto)) {
+            throw new InvalidDetailsException("Can't book past dates");
+        }
         String name = SecurityContextHolder.getContext().getAuthentication().getName();
         User member = userRepository.findByName(name);
         String memberId = member.getId();
