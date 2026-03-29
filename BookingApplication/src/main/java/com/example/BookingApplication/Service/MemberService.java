@@ -21,10 +21,12 @@ import org.bson.types.ObjectId;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.awt.print.Book;
 import java.time.Duration;
@@ -79,29 +81,30 @@ public class MemberService {
         return Conflict;
     }
 
-    public boolean ValidRequest(BookingDTO bookingDto) {
+    public void ValidRequest(BookingDTO bookingDto) {
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
 
         LocalDateTime start = bookingDto.getStartTime();
         LocalDateTime end = bookingDto.getEndTime();
 
         if (start == null || end == null) {
-            throw new RuntimeException("Invalid time");
+            throw new InvalidtimeException("Cannot be Empty");
         }
 
         if (start.isBefore(now)) {
-            throw new RuntimeException("Cannot book in past");
+            throw new InvalidtimeException("Cannot book in the past");
         }
 
         if (!end.isAfter(start)) {
-            throw new RuntimeException("Invalid time range");
+            throw new InvalidtimeException("Cannot be Earlier than start");
         }
 
         if (Duration.between(start, end).toMinutes() < 30) {
-            throw new RuntimeException("Minimum 30 mins required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot be less than 30m");
         }
-        return true;
+
+
     }
 @Transactional
     public Map<String, String> CreateBooking(BookingDTO bookingDto) throws SlotBookedException {
@@ -109,9 +112,7 @@ public class MemberService {
         if (conflictDetection)
             throw new SlotBookedException("Slot Booked");
 
-        if (!ValidRequest(bookingDto)) {
-            throw new InvalidDetailsException("Can't book past dates");
-        }
+        ValidRequest(bookingDto);
         String name = SecurityContextHolder.getContext().getAuthentication().getName();
         User member = userRepository.findByName(name);
         String memberId = member.getId();

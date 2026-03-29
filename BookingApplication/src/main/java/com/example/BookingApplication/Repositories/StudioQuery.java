@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.example.BookingApplication.Enum.BookingStatus;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -64,6 +65,38 @@ public class StudioQuery {
             );
 
             mongoTemplate.save(booking);
+        }
+    }
+
+    @Scheduled(fixedRate = 300000)
+    public void releaseExpiredLocks() {
+
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+
+        Query query = new Query(
+                Criteria.where("status").is("PENDING")
+                        .and("expiresAt").lt(now)
+        );
+
+        List<Bookings> expiredBookings =
+                mongoTemplate.find(query, Bookings.class);
+
+        for (Bookings booking : expiredBookings) {
+
+            try {
+
+                redisconfig.releaseLock(
+                        booking.getStudioId(),
+                        booking.getStartTime(),
+                        booking.getEndTime()
+                );
+
+                booking.setStatus(BookingStatus.EXPIRED);
+                mongoTemplate.save(booking);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

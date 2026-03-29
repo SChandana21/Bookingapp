@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Component
 public class Redisconfig {
 
@@ -22,8 +24,15 @@ public class Redisconfig {
     }
 
 
+    private final DateTimeFormatter formatter =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
     public void releaseLock(String studioId, LocalDateTime start, LocalDateTime end) {
-        String key = "lock:" + studioId + ":" + start + ":" + end;
+
+        String key = "lock:" + studioId + ":" +
+                start.format(formatter) + ":" +
+                end.format(formatter);
+
         redisTemplate.delete(key);
     }
 }

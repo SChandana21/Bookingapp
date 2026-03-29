@@ -16,17 +16,8 @@ public class BookingApplication {
 
 
 
-    @PostConstruct
-    public void testRedis() {
-        try {
-            redisTemplate.opsForValue().set("test-key", "hello");
-            String value = (String) redisTemplate.opsForValue().get("test-key");
-            System.out.println("Redis working: " + value);
-            System.out.println(redisTemplate.getConnectionFactory().getConnection().getClientName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+
+
 	public static void main(String[] args) {
 
         SpringApplication.run(BookingApplication.class, args);
