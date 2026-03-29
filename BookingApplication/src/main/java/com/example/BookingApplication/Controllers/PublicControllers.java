@@ -33,7 +33,7 @@ public class PublicControllers {
         } catch (Exception e) {
             return new ResponseEntity<>("Something went wrong in Creating a user, Please Try again", HttpStatus.CONFLICT);
         }
-        return new ResponseEntity<>("User Created", HttpStatus.FOUND);
+        return new ResponseEntity<>("User Created", HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
