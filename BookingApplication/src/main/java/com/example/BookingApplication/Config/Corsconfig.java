@@ -8,8 +8,8 @@ public class Corsconfig implements WebMvcConfigurer {
 
 @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/getstarted/**").allowedOrigins("http://localhost:3000").allowedMethods("GET", "POST", "PUT", "DELETE").allowedHeaders("*").allowCredentials(true);
-        registry.addMapping("/Booking/**").allowedOrigins("http://localhost:3000").allowedMethods("GET", "POST", "PUT", "DELETE").allowedHeaders("*").allowCredentials(true);
+        registry.addMapping("/getstarted/**").allowedOrigins("http://localhost:3000").allowedOrigins("https://sweet-klepon-b0c33a.netlify.app/").allowedMethods("GET", "POST", "PUT", "DELETE").allowedHeaders("*").allowCredentials(true);
+        registry.addMapping("/Booking/**").allowedOrigins("http://localhost:3000").allowedOrigins("https://sweet-klepon-b0c33a.netlify.app/").allowedMethods("GET", "POST", "PUT", "DELETE").allowedHeaders("*").allowCredentials(true);
 
 }
 }
